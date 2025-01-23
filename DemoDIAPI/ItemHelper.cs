@@ -4,34 +4,54 @@ namespace DemoDIAPI.Classes
 {
     public class ItemHelper
     {
+        string table = "OITM";
+        string field = "";
         public void ProcessItems(Company company, List<Item> items,int CRUD)
         {
             foreach (var item in items)
             {
-                if (CRUD == 0) //ADD ITEM
+                switch (CRUD)
                 {
-                    if (IsItemInDatabase(company, item.ItemCode))
+                case 0:
                     {
-                        Console.WriteLine($"The item {item.ItemCode} already exists");
+                        if (IsItemInDatabase(company, item.ItemCode))
+                        {
+                            Console.WriteLine($"The item {item.ItemCode} already exists");
+                        }
+                        else
+                        {
+                            AddItemToDatabase(company, item);
+                        }
+                        break;
                     }
-                    else
+                case 1:
                     {
-                        AddItemToDatabase(company, item);
+                        if (IsItemInDatabase(company, item.ItemCode))
+                        {
+                            DeleteItemToDatabase(company, item);
+                            Console.WriteLine($"The item {item.ItemCode} deleted successfully!");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"The item {item.ItemCode} delete failed!");
+                        }
+                        break;
                     }
-                }
-                if (CRUD == 1) //DELETE ITEM
-                {
-                    DeleteItemToDatabase(company, item);
-                    if (!IsItemInDatabase(company, item.ItemCode))
+                case 2:
                     {
-                        Console.WriteLine($"The item {item.ItemCode} deleted successfully!");
+                        if (IsItemInDatabase(company, item.ItemCode))
+                        {
+                            UpdateItemToDatabase(company, item);
+                            Console.WriteLine($"The item {item.ItemCode} updated successfully!");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"The item {item.ItemCode} update failed!");
+                        }
+                        break;
                     }
-                    else
-                    {
-                        Console.WriteLine($"The item {item.ItemCode} delete failed!");
-                    }
-                }
 
+                }
             }
         }
         
@@ -67,6 +87,7 @@ namespace DemoDIAPI.Classes
             newItem.ItemCode = item.ItemCode;
             newItem.ItemName = item.ItemName;
             newItem.ItemsGroupCode = item.ItemGroup;
+            newItem.ItemType = ItemTypeEnum.itItems;
 
             var result = newItem.Add();
             if (result != 0)
@@ -85,7 +106,6 @@ namespace DemoDIAPI.Classes
             var newItem = (Items)company.GetBusinessObject(BoObjectTypes.oItems);
 
             newItem.GetByKey(item.ItemCode);
-            Console.WriteLine($"____________________\n{newItem.ToString()}\n______________________________");
             var result = newItem.Remove();
 
             if (result != 0)
@@ -95,6 +115,26 @@ namespace DemoDIAPI.Classes
             else
             {
                 Console.WriteLine($"Item {item.ItemCode} deleted!\n");
+            }
+
+            Utilities.Release(newItem);
+        }
+        private void UpdateItemToDatabase(Company company, Item item)
+        {
+            var newItem = (Items)company.GetBusinessObject(BoObjectTypes.oItems);
+
+            newItem.GetByKey(item.ItemCode);
+
+            newItem.ItemName = "UPDATED DESCRIPTION";
+            var result = newItem.Update();
+
+            if (result != 0)
+            {
+                Console.WriteLine($"ERROR: {company.GetLastErrorDescription()}\n");
+            }
+            else
+            {
+                Console.WriteLine($"Item {item.ItemCode} updated!\n");
             }
 
             Utilities.Release(newItem);

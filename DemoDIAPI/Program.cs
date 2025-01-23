@@ -30,7 +30,7 @@ if (connected){
         clients.Add(new Client(line.CardCode, line.CardName, line.FederalTaxId));
         items.Add(new Item(line.ItemCode, line.ItemName, line.ItemGroup));
     }
-    int CRUD = 1; //0 Add, 1 Delete
+    int CRUD = 0; //0 Add, 1 Delete, 2 Update
     var itemHelper = new ItemHelper();
     itemHelper.ProcessItems(Company, items, CRUD);
 
