@@ -12,6 +12,7 @@
             CardName = cardName;
             FederalTaxId = federalTaxId;
         }
+        public Client() { }
 
         public override string ToString()
         {

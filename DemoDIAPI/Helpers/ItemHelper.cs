@@ -1,20 +1,20 @@
-﻿using SAPbobsCOM;
+﻿using DemoDIAPI.Classes;
+using DocumentFormat.OpenXml.Wordprocessing;
+using SAPbobsCOM;
 
-namespace DemoDIAPI.Classes
+namespace DemoDIAPI.Helpers
 {
     public class ItemHelper
     {
-        string table = "OITM";
-        string field = "";
-        public void ProcessItems(Company company, List<Item> items,int CRUD)
+        private string table = "OITM";
+        private string field = "ItemCode";
+        public void ProcessItems(Company company, Item item, int CRUD)
         {
-            foreach (var item in items)
+            switch (CRUD)
             {
-                switch (CRUD)
-                {
                 case 0:
                     {
-                        if (IsItemInDatabase(company, item.ItemCode))
+                        if (DatabaseHelper.IsInDatabase(company, item.ItemCode, table, field))
                         {
                             Console.WriteLine($"The item {item.ItemCode} already exists");
                         }
@@ -26,7 +26,7 @@ namespace DemoDIAPI.Classes
                     }
                 case 1:
                     {
-                        if (IsItemInDatabase(company, item.ItemCode))
+                        if (DatabaseHelper.IsInDatabase(company, item.ItemCode, table, field))
                         {
                             DeleteItemToDatabase(company, item);
                             Console.WriteLine($"The item {item.ItemCode} deleted successfully!");
@@ -39,7 +39,7 @@ namespace DemoDIAPI.Classes
                     }
                 case 2:
                     {
-                        if (IsItemInDatabase(company, item.ItemCode))
+                        if (DatabaseHelper.IsInDatabase(company, item.ItemCode, table, field))
                         {
                             UpdateItemToDatabase(company, item);
                             Console.WriteLine($"The item {item.ItemCode} updated successfully!");
@@ -51,34 +51,7 @@ namespace DemoDIAPI.Classes
                         break;
                     }
 
-                }
             }
-        }
-        
-        private bool IsItemInDatabase(Company company, string itemCode)
-        {
-            var query = $"""
-                SELECT T0.ItemCode 
-                FROM OITM T0
-                WHERE
-                    T0.ItemCode = '{itemCode}'
-                """;
-
-            Console.WriteLine($"Executing query: {query}");
-            var recordset = (Recordset)company.GetBusinessObject(BoObjectTypes.BoRecordset);
-            recordset.DoQuery(query);
-
-            var exists = !recordset.EoF;
-            if (exists)
-            {//EXISTS ON THE DATABASE
-                Console.WriteLine($"Item {itemCode} exists in the database.\n");
-            }else
-            {//DONT EXISTS ON THE DATABASE
-                Console.WriteLine($"Item {itemCode} does not exist in the database.\n");
-            }
-
-            Utilities.Release(recordset);
-            return exists;
         }
 
         private void AddItemToDatabase(Company company, Item item)
@@ -87,18 +60,19 @@ namespace DemoDIAPI.Classes
             newItem.ItemCode = item.ItemCode;
             newItem.ItemName = item.ItemName;
             newItem.ItemsGroupCode = item.ItemGroup;
-            newItem.ItemType = ItemTypeEnum.itItems;
+            //newItem.UoMGroupEntry = -1;
+            newItem.DefaultWarehouse = "01";
 
-            var result = newItem.Add();
-            if (result != 0)
+            if (newItem.Add() == 0)
             {
-                Console.WriteLine($"ERROR: {company.GetLastErrorDescription()}\n");
+                Console.WriteLine($"{newItem} created properly");
+                company.EndTransaction(BoWfTransOpt.wf_Commit);
             }
             else
             {
-                Console.WriteLine($"Item {item.ItemCode} creation correct!\n");
+                Console.WriteLine($"Error creating {newItem}");
+                company.EndTransaction(BoWfTransOpt.wf_RollBack);
             }
-
             Utilities.Release(newItem);
         }
         private void DeleteItemToDatabase(Company company, Item item)

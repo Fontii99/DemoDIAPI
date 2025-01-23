@@ -5,6 +5,11 @@
         public string ItemCode { get; set; }
         public string ItemName { get; set; }
         public int ItemGroup { get; set; }
+
+        public Item()
+        {
+
+        }
         public Item(string itemCode, string itemName, int itemGroup)
         {
             ItemCode = itemCode;
