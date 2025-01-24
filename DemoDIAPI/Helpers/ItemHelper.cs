@@ -63,15 +63,12 @@ namespace DemoDIAPI.Helpers
             //newItem.UoMGroupEntry = -1;
             newItem.DefaultWarehouse = "01";
 
-            if (newItem.Add() == 0)
+            if (newItem.Add() != 0)
             {
-                Console.WriteLine($"{newItem} created properly");
-                company.EndTransaction(BoWfTransOpt.wf_Commit);
-            }
-            else
-            {
-                Console.WriteLine($"Error creating {newItem}");
-                company.EndTransaction(BoWfTransOpt.wf_RollBack);
+                {
+                    Console.WriteLine($"Error creating {newItem}");
+                    company.EndTransaction(BoWfTransOpt.wf_RollBack);
+                }
             }
             Utilities.Release(newItem);
         }

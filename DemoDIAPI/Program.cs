@@ -33,6 +33,7 @@ if (connected)
     DemoDIAPI.Classes.Item item;
     foreach (var line in data)
     {
+
         //Create a new item to SAP
         item = new DemoDIAPI.Classes.Item
         {
@@ -55,21 +56,7 @@ if (connected)
         // Check if this is a new order (new DocNum)
         if (prevLinesOrder == null || prevLinesOrder.DocNum != line.DocNum)
         {
-            // Check the previous order before creating a new one (only if it's not the first iteration)
-            if (prevLinesOrder != null)
-            {
-                try
-                { 
-                    Company.StartTransaction();
-                    var OrderHelper = new OrderHelper();
-                    OrderHelper.ProcessOrder(Company, currentOrder);
-                }
-                catch
-                {
-                    Console.WriteLine("Transaction failed.");
-                }
-;
-            }
+            
 
             // Create a new client to SAP
             var client = new Client
@@ -81,7 +68,6 @@ if (connected)
 
             try
             {
-                Company.StartTransaction();
                 var clientHelper = new ClientHelper();
                 clientHelper.ProcessClient(Company, client, CRUD);
             }
@@ -104,6 +90,22 @@ if (connected)
             currentOrder.orderLine.Add(line);
             // Add the order to the orders list
             orders.Add(currentOrder);
+
+            // Check the previous order before creating a new one (only if it's not the first iteration)
+            if (prevLinesOrder != null)
+            {
+                try
+                {
+                    var OrderHelper = new OrderHelper();
+                    OrderHelper.ProcessOrder(Company, currentOrder);
+                }
+                catch
+                {
+                    Console.WriteLine("Transaction failed.");
+                }
+;
+            }
+
         }
         else
         {
@@ -114,22 +116,6 @@ if (connected)
         // Update previous line tracking
         prevLinesOrder = line;
     }
-
-    // Don't forget to process the last order after the loop
-    if (currentOrder != null)
-    {
-        try
-        {
-            Company.StartTransaction();
-            var OrderHelper = new OrderHelper();
-            OrderHelper.ProcessOrder(Company, currentOrder);
-        }
-        catch
-        {
-            Console.WriteLine("Transaction failed.");
-        }
-    }
-
 
 
     if (Company.Connected)

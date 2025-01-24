@@ -60,15 +60,10 @@ namespace DemoDIAPI.Helpers
             newClient.CardName = client.CardName;
             newClient.FederalTaxID = client.FederalTaxId;
 
-            if (newClient.Add() == 0)
-            {
-                Console.WriteLine($"{newClient.CardCode} created properly");
-                company.EndTransaction(BoWfTransOpt.wf_Commit);
-            }
-            else
+            if (newClient.Add() != 0)
             {
                 Console.WriteLine($"Error creating {newClient.CardCode}");
-                company.EndTransaction(BoWfTransOpt.wf_RollBack);
+                company.EndTransaction(BoWfTransOpt.wf_RollBack); ;
             }
             Utilities.Release(newClient);
         }
