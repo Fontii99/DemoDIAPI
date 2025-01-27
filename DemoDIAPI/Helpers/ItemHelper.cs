@@ -8,7 +8,7 @@ namespace DemoDIAPI.Helpers
     {
         private string table = "OITM";
         private string field = "ItemCode";
-        public void ProcessItems(Company company, Item item, int CRUD)
+        public bool ProcessItems(Company company, Item item, int CRUD)
         {
             switch (CRUD)
             {
@@ -17,12 +17,19 @@ namespace DemoDIAPI.Helpers
                         if (DatabaseHelper.IsInDatabase(company, item.ItemCode, table, field))
                         {
                             Console.WriteLine($"The item {item.ItemCode} already exists");
+                            return true;
                         }
                         else
                         {
-                            AddItemToDatabase(company, item);
+                            if (AddItemToDatabase(company, item))
+                            {
+                                return true;
+                            }
+                            else
+                            {
+                                return false;
+                            }
                         }
-                        break;
                     }
                 case 1:
                     {
@@ -30,12 +37,13 @@ namespace DemoDIAPI.Helpers
                         {
                             DeleteItemToDatabase(company, item);
                             Console.WriteLine($"The item {item.ItemCode} deleted successfully!");
+                            return true;
                         }
                         else
                         {
                             Console.WriteLine($"The item {item.ItemCode} delete failed!");
+                            return false;
                         }
-                        break;
                     }
                 case 2:
                     {
@@ -43,18 +51,19 @@ namespace DemoDIAPI.Helpers
                         {
                             UpdateItemToDatabase(company, item);
                             Console.WriteLine($"The item {item.ItemCode} updated successfully!");
+                            return true;
                         }
                         else
                         {
                             Console.WriteLine($"The item {item.ItemCode} update failed!");
+                            return false;
                         }
-                        break;
                     }
-
             }
+            return false;
         }
 
-        private void AddItemToDatabase(Company company, Item item)
+        private bool AddItemToDatabase(Company company, Item item)
         {
             var newItem = (Items)company.GetBusinessObject(BoObjectTypes.oItems);
             newItem.ItemCode = item.ItemCode;
@@ -65,14 +74,18 @@ namespace DemoDIAPI.Helpers
 
             if (newItem.Add() != 0)
             {
-                {
-                    Console.WriteLine($"Error creating {newItem}");
-                    company.EndTransaction(BoWfTransOpt.wf_RollBack);
-                }
+                Console.WriteLine($"Error creating {newItem}");
+                Utilities.Release(newItem);
+                return false;
             }
-            Utilities.Release(newItem);
+            else
+            {
+                Utilities.Release(newItem);
+                return true;
+            }
+
         }
-        private void DeleteItemToDatabase(Company company, Item item)
+        private bool DeleteItemToDatabase(Company company, Item item)
         {
             var newItem = (Items)company.GetBusinessObject(BoObjectTypes.oItems);
 
@@ -82,33 +95,39 @@ namespace DemoDIAPI.Helpers
             if (result != 0)
             {
                 Console.WriteLine($"ERROR: {company.GetLastErrorDescription()}\n");
+                Utilities.Release(newItem);
+                return false;
             }
             else
             {
                 Console.WriteLine($"Item {item.ItemCode} deleted!\n");
+                Utilities.Release(newItem);
+                return true;
             }
-
-            Utilities.Release(newItem);
         }
-        private void UpdateItemToDatabase(Company company, Item item)
+        private bool UpdateItemToDatabase(Company company, Item item)
         {
             var newItem = (Items)company.GetBusinessObject(BoObjectTypes.oItems);
 
             newItem.GetByKey(item.ItemCode);
 
-            newItem.ItemName = "UPDATED DESCRIPTION";
+            newItem.UoMGroupEntry = -1;
             var result = newItem.Update();
 
             if (result != 0)
             {
                 Console.WriteLine($"ERROR: {company.GetLastErrorDescription()}\n");
+                Utilities.Release(newItem);
+                return false;
+
             }
             else
             {
                 Console.WriteLine($"Item {item.ItemCode} updated!\n");
+                Utilities.Release(newItem);
+                return true;
             }
 
-            Utilities.Release(newItem);
         }
     }
 }

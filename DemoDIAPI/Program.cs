@@ -39,91 +39,123 @@ switch (testString)
                 List<Order> orders = new List<Order>();
                 ExcelData prevLinesOrder = null;
                 Order currentOrder = null;
-                DemoDIAPI.Classes.Item item;
                 foreach (var line in data)
                 {
-
-                    //Create a new item to SAP
-                    item = new DemoDIAPI.Classes.Item
-                    {
-                        ItemCode = line.ItemCode,
-                        ItemName = line.ItemName,
-                        ItemGroup = line.ItemGroup
-                    };
-
                     try
                     {
-                        Company.StartTransaction();
+                        // Start a single transaction for the entire process
+                        if (!Company.InTransaction)
+                        {
+                            Company.StartTransaction();
+                        }
+
+                        // 1. Process Item - don't rollback if it already exists
+                        var item = new DemoDIAPI.Classes.Item
+                        {
+                            ItemCode = line.ItemCode,
+                            ItemName = line.ItemName,
+                            ItemGroup = line.ItemGroup
+                        };
+
                         var itemHelper = new ItemHelper();
-                        itemHelper.ProcessItems(Company, item, CRUD);
-                    }
-                    catch
-                    {
-                        Console.WriteLine("Transaction failed.");
-                    }
-            ;
-                    // Check if this is a new order (new DocNum)
-                    if (prevLinesOrder == null || prevLinesOrder.DocNum != line.DocNum)
-                    {
-
-
-                        // Create a new client to SAP
-                        var client = new Client
+                        bool itemProcessed = itemHelper.ProcessItems(Company, item, CRUD);
+                        if (!itemProcessed)
                         {
-                            CardName = line.CardName,
-                            CardCode = line.CardCode,
-                            FederalTaxId = line.FederalTaxId
-                        };
+                            throw new Exception("Item creation failed");
+                        }
 
-                        try
+                        // 2. Process Client (only for new DocNum) - don't rollback if it already exists
+                        if (prevLinesOrder == null || prevLinesOrder.DocNum != line.DocNum)
                         {
+                            var client = new Client
+                            {
+                                CardName = line.CardName,
+                                CardCode = line.CardCode,
+                                FederalTaxId = line.FederalTaxId
+                            };
+
                             var clientHelper = new ClientHelper();
-                            clientHelper.ProcessClient(Company, client, CRUD);
-                        }
-                        catch
-                        {
-                            Console.WriteLine("Transaction failed.");
-                        }
-            ;
-                        // Create a new order
-                        currentOrder = new Order
-                        {
-                            DocNum = line.DocNum,
-                            DocDate = line.DocDate,
-                            CardCode = client.CardCode,
-                            Description = line.Comments,
-                            orderLine = new List<ExcelData>()
-                        };
+                            bool clientProcessed = clientHelper.ProcessClient(Company, client, CRUD);
+                            if (!clientProcessed)
+                            {
+                                throw new Exception("Client creation failed");
+                            }
 
-                        //Add the first line to the order
-                        currentOrder.orderLine.Add(line);
-                        // Add the order to the orders list
-                        orders.Add(currentOrder);
+                            // 3. Create new order
+                            currentOrder = new Order
+                            {
+                                DocNum = line.DocNum,
+                                DocDate = line.DocDate,
+                                CardCode = client.CardCode,
+                                Description = line.Comments,
+                                orderLine = new List<ExcelData>()
+                            };
+                            currentOrder.orderLine.Add(line);
+                            orders.Add(currentOrder);
 
-                        // Check the previous order before creating a new one (only if it's not the first iteration)
-                        if (prevLinesOrder != null)
-                        {
-                            try
+                            // Process previous order if exists
+                            if (prevLinesOrder != null)
                             {
                                 var OrderHelper = new OrderHelper();
-                                OrderHelper.ProcessOrder(Company, currentOrder);
+                                if (!OrderHelper.ProcessOrder(Company, currentOrder))
+                                {
+                                    throw new Exception("Order creation failed");
+                                }
+
+                                // If order is created successfully, commit the transaction
+                                Company.EndTransaction(BoWfTransOpt.wf_Commit);
+                                Console.WriteLine("Order created successfully!");
+
+                                // Start new transaction for next order
+                                Company.StartTransaction();
                             }
-                            catch
-                            {
-                                Console.WriteLine("Transaction failed.");
-                            }
-            ;
+                        }
+                        else
+                        {
+                            // Add line to existing order
+                            currentOrder.orderLine.Add(line);
                         }
 
+                        // Update previous line tracking
+                        prevLinesOrder = line;
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        // If it's the same order, just add the item to the existing order
-                        currentOrder.orderLine.Add(line);
+                        // Any failure will trigger rollback
+                        if (Company.InTransaction)
+                        {
+                            Company.EndTransaction(BoWfTransOpt.wf_RollBack);
+                        }
+                        Console.WriteLine($"Transaction failed: {ex.Message}");
                     }
+                }
 
-                    // Update previous line tracking
-                    prevLinesOrder = line;
+                // Process the last order if exists
+                if (currentOrder != null && currentOrder.orderLine.Any())
+                {
+                    try
+                    {
+                        var OrderHelper = new OrderHelper();
+                        if (!OrderHelper.ProcessOrder(Company, currentOrder))
+                        {
+                            throw new Exception("Final order creation failed");
+                        }
+
+                        // Commit the final transaction
+                        if (Company.InTransaction)
+                        {
+                            Company.EndTransaction(BoWfTransOpt.wf_Commit);
+                            Console.WriteLine("Final order created successfully!");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (Company.InTransaction)
+                        {
+                            Company.EndTransaction(BoWfTransOpt.wf_RollBack);
+                        }
+                        Console.WriteLine($"Final transaction failed: {ex.Message}");
+                    }
                 }
 
 

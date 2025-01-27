@@ -8,7 +8,7 @@ namespace DemoDIAPI.Helpers
     {
         private string table = "OCRD";
         private string field = "CardCode";
-        public void ProcessClient(Company company, Client client, int CRUD)
+        public bool ProcessClient(Company company, Client client, int CRUD)
         {
             switch (CRUD)
             {
@@ -17,12 +17,19 @@ namespace DemoDIAPI.Helpers
                         if (DatabaseHelper.IsInDatabase(company, client.CardCode, table, field))
                         {
                             Console.WriteLine($"The client {client.CardCode} already exists");
+                            return true;
                         }
                         else
                         {
-                            AddClientToDatabase(company, client);
+                            if (AddClientToDatabase(company, client))
+                            {
+                                return true;
+                            }
+                            else
+                            {
+                                return false;
+                            }
                         }
-                        break;
                     }
                 case 1:
                     {
@@ -30,12 +37,13 @@ namespace DemoDIAPI.Helpers
                         {
                             DeleteClientToDatabase(company, client);
                             Console.WriteLine($"The client {client.CardCode} deleted successfully!");
+                            return true;
                         }
                         else
                         {
                             Console.WriteLine($"The client {client.CardCode} delete failed!");
+                            return false;
                         }
-                        break;
                     }
                 case 2:
                     {
@@ -43,17 +51,19 @@ namespace DemoDIAPI.Helpers
                         {
                             UpdateClientToDatabase(company, client);
                             Console.WriteLine($"The item {client.CardCode} updated successfully!");
+                            return true;
                         }
                         else
                         {
                             Console.WriteLine($"The item {client.CardCode} update failed!");
+                            return false;
                         }
-                        break;
                     }
 
             }
+            return false;
         }
-        private void AddClientToDatabase(Company company, Client client)
+        private bool AddClientToDatabase(Company company, Client client)
         {
             var newClient = (BusinessPartners)company.GetBusinessObject(BoObjectTypes.oBusinessPartners);
             newClient.CardCode = client.CardCode;
@@ -63,11 +73,17 @@ namespace DemoDIAPI.Helpers
             if (newClient.Add() != 0)
             {
                 Console.WriteLine($"Error creating {newClient.CardCode}");
-                company.EndTransaction(BoWfTransOpt.wf_RollBack); ;
+                Utilities.Release(newClient);
+                return false;
             }
-            Utilities.Release(newClient);
+            else
+            {
+                Utilities.Release(newClient);
+                return true;
+            }
+
         }
-        private void DeleteClientToDatabase(Company company, Client client)
+        private bool DeleteClientToDatabase(Company company, Client client)
         {
             var newClient = (BusinessPartners)company.GetBusinessObject(BoObjectTypes.oBusinessPartners);
 
@@ -77,15 +93,17 @@ namespace DemoDIAPI.Helpers
             if (result != 0)
             {
                 Console.WriteLine($"ERROR: {company.GetLastErrorDescription()}\n");
+                Utilities.Release(newClient);
+                return false;
             }
             else
             {
                 Console.WriteLine($"Client {newClient.CardCode} deleted!\n");
+                Utilities.Release(newClient);
+                return true;
             }
-
-            Utilities.Release(newClient);
         }
-        private void UpdateClientToDatabase(Company company, Client client)
+        private bool UpdateClientToDatabase(Company company, Client client)
         {
             var newClient = (BusinessPartners)company.GetBusinessObject(BoObjectTypes.oBusinessPartners);
 
@@ -97,13 +115,15 @@ namespace DemoDIAPI.Helpers
             if (result != 0)
             {
                 Console.WriteLine($"ERROR: {company.GetLastErrorDescription()}\n");
+                Utilities.Release(newClient);
+                return false;
             }
             else
             {
                 Console.WriteLine($"Client {newClient.CardCode} updated!\n");
+                Utilities.Release(newClient);
+                return true;
             }
-
-            Utilities.Release(newClient);
         }
     }
 }

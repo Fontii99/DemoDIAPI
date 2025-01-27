@@ -27,6 +27,7 @@ namespace DemoDIAPI.Helpers
                 newInvoice.Lines.BaseEntry = order[0];
                 newInvoice.Lines.BaseType = 17;
                 newInvoice.Lines.BaseLine = order[1];
+                newInvoice.Lines.UoMEntry = 1;
                 if (newInvoice.Add() == 0)
                 {
                     string docEntry = company.GetNewObjectKey();
@@ -46,6 +47,8 @@ namespace DemoDIAPI.Helpers
                 newInvoice.CardCode = invoiceData.CardCode;
                 newInvoice.Lines.ItemCode = invoiceData.ItemCode;
                 newInvoice.Lines.Quantity = invoiceData.Quantity;
+                newInvoice.Lines.UoMEntry = -1;
+
                 if (newInvoice.Add() == 0)
                 {
                     string docEntry = company.GetNewObjectKey();

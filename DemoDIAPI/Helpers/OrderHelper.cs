@@ -5,13 +5,13 @@ namespace DemoDIAPI.Helpers
 {
     public class OrderHelper
     {
-        public void ProcessOrder(Company company, Order order)
+        public bool ProcessOrder(Company company, Order order)
         {
 
-            AddOrderToDatabase(company, order);
+            return (AddOrderToDatabase(company, order));
 
         }
-        private void AddOrderToDatabase(Company company, Order order)
+        private bool AddOrderToDatabase(Company company, Order order)
         {
             var newOrder = (Documents)company.GetBusinessObject(BoObjectTypes.oOrders);
             newOrder.CardCode = order.CardCode;
@@ -31,16 +31,17 @@ namespace DemoDIAPI.Helpers
             if(newOrder.Add()==0)
             {
                 string docEntry = company.GetNewObjectKey();
-                Console.WriteLine($"DocNum:{docEntry}");
-                company.EndTransaction(BoWfTransOpt.wf_Commit);
+                Utilities.Release(newOrder);
+                return true;
             }
             else
             {
                 Console.WriteLine($"Order not created properly: {company.GetLastErrorDescription()}");
-                company.EndTransaction(BoWfTransOpt.wf_RollBack);
+                Utilities.Release(newOrder);
+                return false;
             }
 
-            Utilities.Release(newOrder);
+
         }
     }
 }
