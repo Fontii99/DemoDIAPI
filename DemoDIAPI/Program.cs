@@ -22,108 +22,150 @@ bool connected = DatabaseHelper.Connect(Company);
 
 var CRUD = 0; //0 Add, 1 Delete, 2 Update
 
-if (connected)
+string testString;
+Console.Write("Enter I for Invoices or O for Orders. E for exit:\n");
+testString = Console.ReadLine().ToUpper();
+
+
+switch (testString)
 {
-    var reader = new ExcelReader();
-    var data = reader.ReadExcelFile(@"C:\\Users\\pfont2\\source\\repos\\DemoDIAPI\\DemoDIAPI\\Data\\SAP_Business_One_Data.xlsx");
-
-    List<Order> orders = new List<Order>();
-    ExcelData prevLinesOrder = null;
-    Order currentOrder = null;
-    DemoDIAPI.Classes.Item item;
-    foreach (var line in data)
-    {
-
-        //Create a new item to SAP
-        item = new DemoDIAPI.Classes.Item
+    case "O":
         {
-            ItemCode = line.ItemCode,
-            ItemName = line.ItemName,
-            ItemGroup = line.ItemGroup
-        };
-
-        try
-        {
-            Company.StartTransaction();
-            var itemHelper = new ItemHelper();
-            itemHelper.ProcessItems(Company, item, CRUD);
-        }
-        catch
-        {
-            Console.WriteLine("Transaction failed.");
-        }
-;
-        // Check if this is a new order (new DocNum)
-        if (prevLinesOrder == null || prevLinesOrder.DocNum != line.DocNum)
-        {
-            
-
-            // Create a new client to SAP
-            var client = new Client
+            if (connected)
             {
-                CardName = line.CardName,
-                CardCode = line.CardCode,
-                FederalTaxId = line.FederalTaxId
-            };
+                var reader = new ExcelReader();
+                var data = reader.ReadExcelFile(@"C:\\Users\\pfont2\\source\\repos\\DemoDIAPI\\DemoDIAPI\\Data\\SAP_Business_One_Data.xlsx");
 
-            try
-            {
-                var clientHelper = new ClientHelper();
-                clientHelper.ProcessClient(Company, client, CRUD);
+                List<Order> orders = new List<Order>();
+                ExcelData prevLinesOrder = null;
+                Order currentOrder = null;
+                DemoDIAPI.Classes.Item item;
+                foreach (var line in data)
+                {
+
+                    //Create a new item to SAP
+                    item = new DemoDIAPI.Classes.Item
+                    {
+                        ItemCode = line.ItemCode,
+                        ItemName = line.ItemName,
+                        ItemGroup = line.ItemGroup
+                    };
+
+                    try
+                    {
+                        Company.StartTransaction();
+                        var itemHelper = new ItemHelper();
+                        itemHelper.ProcessItems(Company, item, CRUD);
+                    }
+                    catch
+                    {
+                        Console.WriteLine("Transaction failed.");
+                    }
+            ;
+                    // Check if this is a new order (new DocNum)
+                    if (prevLinesOrder == null || prevLinesOrder.DocNum != line.DocNum)
+                    {
+
+
+                        // Create a new client to SAP
+                        var client = new Client
+                        {
+                            CardName = line.CardName,
+                            CardCode = line.CardCode,
+                            FederalTaxId = line.FederalTaxId
+                        };
+
+                        try
+                        {
+                            var clientHelper = new ClientHelper();
+                            clientHelper.ProcessClient(Company, client, CRUD);
+                        }
+                        catch
+                        {
+                            Console.WriteLine("Transaction failed.");
+                        }
+            ;
+                        // Create a new order
+                        currentOrder = new Order
+                        {
+                            DocNum = line.DocNum,
+                            DocDate = line.DocDate,
+                            CardCode = client.CardCode,
+                            Description = line.Comments,
+                            orderLine = new List<ExcelData>()
+                        };
+
+                        //Add the first line to the order
+                        currentOrder.orderLine.Add(line);
+                        // Add the order to the orders list
+                        orders.Add(currentOrder);
+
+                        // Check the previous order before creating a new one (only if it's not the first iteration)
+                        if (prevLinesOrder != null)
+                        {
+                            try
+                            {
+                                var OrderHelper = new OrderHelper();
+                                OrderHelper.ProcessOrder(Company, currentOrder);
+                            }
+                            catch
+                            {
+                                Console.WriteLine("Transaction failed.");
+                            }
+            ;
+                        }
+
+                    }
+                    else
+                    {
+                        // If it's the same order, just add the item to the existing order
+                        currentOrder.orderLine.Add(line);
+                    }
+
+                    // Update previous line tracking
+                    prevLinesOrder = line;
+                }
+
+
+                if (Company.Connected)
+                    Company.Disconnect();
+
+                Utilities.Release(Company);
             }
-            catch
+            else
             {
-                Console.WriteLine("Transaction failed.");
+                Console.WriteLine("I'm not connected");
             }
-;
-            // Create a new order
-            currentOrder = new Order
-            {
-                DocNum = line.DocNum,
-                DocDate = line.DocDate,
-                CardCode = client.CardCode,
-                Description = line.Comments,
-                orderLine = new List<ExcelData>()
-            };
+            break;
+        }
+    case "I":
+        {
+            var reader = new ExcelReaderInvoices();
+            var invoices = reader.ReadExcelFile(@"C:\\Users\\pfont2\\source\\repos\\DemoDIAPI\\DemoDIAPI\\Data\\Facturas.xlsx");
 
-            //Add the first line to the order
-            currentOrder.orderLine.Add(line);
-            // Add the order to the orders list
-            orders.Add(currentOrder);
-
-            // Check the previous order before creating a new one (only if it's not the first iteration)
-            if (prevLinesOrder != null)
+            foreach (var invoice in invoices)
             {
                 try
                 {
-                    var OrderHelper = new OrderHelper();
-                    OrderHelper.ProcessOrder(Company, currentOrder);
+                    Company.StartTransaction();
+                    var invoiceHelper = new InvoiceHelper();
+                    invoiceHelper.ProcessInvoice(Company, invoice);
                 }
                 catch
                 {
                     Console.WriteLine("Transaction failed.");
                 }
-;
-            }
-
         }
-        else
+            break;
+        }
+    case "E":
         {
-            // If it's the same order, just add the item to the existing order
-            currentOrder.orderLine.Add(line);
+            Console.WriteLine("Ending process");
+            break;
         }
-
-        // Update previous line tracking
-        prevLinesOrder = line;
-    }
-
-
-    if (Company.Connected)
-        Company.Disconnect();
-
-    Utilities.Release(Company);
-}
-else
-{
-    Console.WriteLine("I'm not connected");
+    default:
+        {
+            Console.WriteLine("Please enter a correct option");
+            break;
+        }
 }
