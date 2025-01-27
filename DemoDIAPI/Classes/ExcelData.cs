@@ -54,7 +54,7 @@
                             ItemName = row.Cell(8).GetString(),
                             ItemGroup = int.Parse(row.Cell(9).GetString()),
                             Quantity = decimal.Parse(row.Cell(10).GetString().Replace(",", ".")),
-                            Price = decimal.Parse(row.Cell(11).GetString().Replace(",", ".")),
+                            Price = decimal.Parse(row.Cell(11).GetString()),
                             Discount = decimal.Parse(row.Cell(12).GetString().Replace(",", "."))
                         };
                         orders.Add(order);

@@ -20,9 +20,10 @@ namespace DemoDIAPI.Helpers
             newOrder.Comments = order.Description;
             foreach (var line in order.orderLine)
             {
+                var x = (double)line.Price;
                 newOrder.Lines.ItemCode = line.ItemCode;
                 newOrder.Lines.Quantity = (double)line.Quantity;
-                newOrder.Lines.Price = (double)line.Price;
+                newOrder.Lines.UnitPrice = (double)line.Price;
                 newOrder.Lines.DiscountPercent = (double)line.Discount;
                 newOrder.Lines.UoMEntry = 1;
                 newOrder.Lines.Add();

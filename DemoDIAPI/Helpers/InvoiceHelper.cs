@@ -31,13 +31,11 @@ namespace DemoDIAPI.Helpers
                 if (newInvoice.Add() == 0)
                 {
                     string docEntry = company.GetNewObjectKey();
-                    Console.WriteLine($"DocNum:{docEntry}");
-                    company.EndTransaction(BoWfTransOpt.wf_Commit);
+                    Console.WriteLine($"Invoice DocNum:{docEntry} created properly");
                 }
                 else
                 {
                     Console.WriteLine($"Invoice not created properly: {company.GetLastErrorDescription()}");
-                    company.EndTransaction(BoWfTransOpt.wf_RollBack);
                 }
             }
             else
@@ -52,13 +50,11 @@ namespace DemoDIAPI.Helpers
                 if (newInvoice.Add() == 0)
                 {
                     string docEntry = company.GetNewObjectKey();
-                    Console.WriteLine($"DocNum:{docEntry}");
-                    company.EndTransaction(BoWfTransOpt.wf_Commit);
+                    Console.WriteLine($"Invoice DocNum:{docEntry} created properly");
                 }
                 else
                 {
                     Console.WriteLine($"Invoice not created properly: {company.GetLastErrorDescription()}");
-                    company.EndTransaction(BoWfTransOpt.wf_RollBack);
                 }
             }
         }

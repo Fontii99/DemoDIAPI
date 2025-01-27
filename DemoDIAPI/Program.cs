@@ -177,17 +177,9 @@ switch (testString)
 
             foreach (var invoice in invoices)
             {
-                try
-                {
-                    Company.StartTransaction();
-                    var invoiceHelper = new InvoiceHelper();
-                    invoiceHelper.ProcessInvoice(Company, invoice);
-                }
-                catch
-                {
-                    Console.WriteLine("Transaction failed.");
-                }
-        }
+                var invoiceHelper = new InvoiceHelper();
+                invoiceHelper.ProcessInvoice(Company, invoice);
+            }
             break;
         }
     case "E":
